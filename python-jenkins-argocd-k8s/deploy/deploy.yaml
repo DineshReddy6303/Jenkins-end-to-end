@@ -16,6 +16,6 @@ spec:
     spec:
       containers:
         - name: todo
-          image: jibbbax/cicd-e2e:23
+          image: jibbbax/cicd-e2e:28
           ports:
             - containerPort: 8000
