@@ -19,11 +19,13 @@ stages {
     }
 
     stage('Build Docker') {
-        steps {
-            sh '''
-                echo "Building Docker Image"
-                docker build -t jibbax/cicd-e2e:${BUILD_NUMBER} .
-            '''
+    steps {
+        sh '''
+            echo "Building Docker Image"
+            cd python-jenkins-argocd-k8s
+            docker build -t jibbax/cicd-e2e:${BUILD_NUMBER} .
+        '''
+          
         }
     }
 
