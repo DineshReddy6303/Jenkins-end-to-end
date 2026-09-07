@@ -23,7 +23,7 @@ stages {
         sh '''
             echo "Building Docker Image"
             cd python-jenkins-argocd-k8s
-            docker build -t jibbax/cicd-e2e:${BUILD_NUMBER} .
+            docker build -t jibbbax/cicd-e2e:${BUILD_NUMBER} .
         '''
           
         }
@@ -40,7 +40,7 @@ stages {
             ]) {
                 sh '''
                     echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
-                    docker push jibbax/cicd-e2e:${BUILD_NUMBER}
+                    docker push jibbbax/cicd-e2e:${BUILD_NUMBER}
                     docker logout
                 '''
             }
@@ -69,7 +69,7 @@ stages {
                 echo "Before update:"
                 cat deploy.yaml
 
-                sed -i "s#jibbax/cicd-e2e:[0-9]*#jibbax/cicd-e2e:${BUILD_NUMBER}#g" deploy.yaml
+                sed -i "s#jibbbax/cicd-e2e:[0-9]*#jibbax/cicd-e2e:${BUILD_NUMBER}#g" deploy.yaml
 
                 echo "After update:"
                 cat deploy.yaml
