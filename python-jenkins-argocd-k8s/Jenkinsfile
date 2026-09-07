@@ -10,8 +10,8 @@ pipeline {
         
         stage('Checkout'){
            steps {
-                git credentialsId: 'f87a34a8-0e09-45e7-b9cf-6dc68feac670', 
-                url: 'https://github.com/DineshReddy6303/cicd-end-to-end',
+                git credentialsId: 'github-credentials',
+            url: 'https://github.com/DineshReddy6303/Jenkins-end-to-end'
                 branch: 'main'
            }
         }
@@ -40,7 +40,7 @@ pipeline {
         
         stage('Checkout K8S manifest SCM'){
             steps {
-                git credentialsId: 'f87a34a8-0e09-45e7-b9cf-6dc68feac670', 
+                git credentialsId: 'github-credentials' , 
                 url: 'https://github.com/DineshReddy6303/cicd-demo-manifests-repo.git',
                 branch: 'main'
             }
