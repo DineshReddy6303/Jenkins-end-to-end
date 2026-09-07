@@ -14,7 +14,6 @@ pipeline {
                     git(
                         credentialsId: 'github-credentials',
                         url: 'https://github.com/DineshReddy6303/Jenkins-end-to-end.git',
-,
                         branch: 'main'
                     )
                 }
@@ -56,21 +55,9 @@ pipeline {
             }
         }
 
-        stage('Checkout K8S Manifest') {
-            steps {
-                dir('k8s-manifests') {
-                    git(
-                        credentialsId: 'github-credentials',
-                        url: 'https://github.com/DineshReddy6303/cicd-demo-manifests-repo.git',
-                        branch: 'main'
-                    )
-                }
-            }
-        }
-
         stage('Update K8S Manifest') {
             steps {
-                dir('k8s-manifests') {
+                dir('application/python-jenkins-argocd-k8s') {
                     sh '''
                         echo "Current directory:"
                         pwd
@@ -92,7 +79,7 @@ pipeline {
 
         stage('Commit and Push K8S Manifest') {
             steps {
-                dir('k8s-manifests') {
+                dir('application/python-jenkins-argocd-k8s') {
                     sh '''
                         git config user.name "Jenkins"
                         git config user.email "jenkins@localhost"
