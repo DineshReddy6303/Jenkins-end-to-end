@@ -1,95 +1,109 @@
 pipeline {
-agent any
+    agent any
 
-
-environment {
-    IMAGE_TAG = "${BUILD_NUMBER}"
-}
-
-stages {
-
-    stage('Checkout Application') {
-        steps {
-            git(
-                credentialsId: 'github-credentials',
-                url: 'https://github.com/DineshReddy6303/Jenkins-end-to-end.git',
-                branch: 'main'
-            )
-        }
+    environment {
+        IMAGE_NAME = "jibbbax/cicd-e2e"
+        IMAGE_TAG = "${BUILD_NUMBER}"
     }
 
-    stage('Build Docker') {
-    steps {
-        sh '''
-            echo "Building Docker Image"
-            cd python-jenkins-argocd-k8s
-            docker build -t jibbbax/cicd-e2e:${BUILD_NUMBER} .
-        '''
-          
-        }
-    }
+    stages {
 
-    stage('Push Docker Image') {
-        steps {
-            withCredentials([
-                usernamePassword(
-                    credentialsId: 'Dockerhub_Credentails',
-                    usernameVariable: 'DOCKER_USERNAME',
-                    passwordVariable: 'DOCKER_PASSWORD'
-                )
-            ]) {
+        stage('Checkout Application') {
+            steps {
+                dir('application') {
+                    git(
+                        credentialsId: 'github-credentials',
+                        url: 'https://github.com/DineshReddy6303/Jenkins-end-to-end.git',
+                        branch: 'main'
+                    )
+                }
+            }
+        }
+
+        stage('Build Docker') {
+            steps {
                 sh '''
-                    echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
-                    docker push jibbbax/cicd-e2e:${BUILD_NUMBER}
-                    docker logout
+                    echo "Building Docker Image"
+
+                    cd application/python-jenkins-argocd-k8s
+
+                    docker build \
+                        -t ${IMAGE_NAME}:${IMAGE_TAG} .
                 '''
             }
         }
-    }
 
-    stage('Checkout K8S Manifest') {
-        steps {
-            git(
-                credentialsId: 'github-credentials',
-                url: 'https://github.com/DineshReddy6303/cicd-demo-manifests-repo.git',
-                branch: 'main'
-            )
+        stage('Push Docker Image') {
+            steps {
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'Dockerhub_Credentails',
+                        usernameVariable: 'DOCKER_USERNAME',
+                        passwordVariable: 'DOCKER_PASSWORD'
+                    )
+                ]) {
+                    sh '''
+                        echo "$DOCKER_PASSWORD" | docker login \
+                            -u "$DOCKER_USERNAME" \
+                            --password-stdin
+
+                        docker push ${IMAGE_NAME}:${IMAGE_TAG}
+
+                        docker logout
+                    '''
+                }
+            }
+        }
+
+        stage('Checkout K8S Manifest') {
+            steps {
+                dir('k8s-manifests') {
+                    git(
+                        credentialsId: 'github-credentials',
+                        url: 'https://github.com/DineshReddy6303/cicd-demo-manifests-repo.git',
+                        branch: 'main'
+                    )
+                }
+            }
+        }
+
+        stage('Update K8S Manifest') {
+            steps {
+                dir('k8s-manifests') {
+                    sh '''
+                        echo "Current directory:"
+                        pwd
+
+                        echo "Files:"
+                        ls -la
+
+                        echo "Before update:"
+                        cat deploy.yaml
+
+                        sed -i "s#jibbbax/cicd-e2e:[0-9]*#jibbbax/cicd-e2e:${BUILD_NUMBER}#g" deploy.yaml
+
+                        echo "After update:"
+                        cat deploy.yaml
+                    '''
+                }
+            }
+        }
+
+        stage('Commit and Push K8S Manifest') {
+            steps {
+                dir('k8s-manifests') {
+                    sh '''
+                        git config user.name "Jenkins"
+                        git config user.email "jenkins@localhost"
+
+                        git add deploy.yaml
+
+                        git commit -m "Update Docker image tag to ${BUILD_NUMBER}" || true
+
+                        git push origin HEAD:main
+                    '''
+                }
+            }
         }
     }
-
-    stage('Update K8S Manifest') {
-        steps {
-            sh '''
-                echo "Current directory:"
-                pwd
-
-                echo "Files:"
-                ls -la
-
-                echo "Before update:"
-                cat deploy.yaml
-
-                sed -i "s#jibbbax/cicd-e2e:[0-9]*#jibbax/cicd-e2e:${BUILD_NUMBER}#g" deploy.yaml
-
-                echo "After update:"
-                cat deploy.yaml
-            '''
-        }
-    }
-
-    stage('Commit and Push K8S Manifest') {
-        steps {
-            sh '''
-                git config user.name "Jenkins"
-                git config user.email "jenkins@localhost"
-
-                git add deploy.yaml
-                git commit -m "Update Docker image tag to ${BUILD_NUMBER}" || true
-                git push origin HEAD:main
-            '''
-        }
-    }
-}
-
-
 }
