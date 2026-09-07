@@ -59,19 +59,15 @@ pipeline {
             steps {
                 dir('application/python-jenkins-argocd-k8s') {
                     sh '''
-                        echo "Current directory:"
-                        pwd
-
-                        echo "Files:"
-                        ls -la
-
                         echo "Before update:"
-                        cat deploy.yaml
+                        cat deploy/deploy.yaml
 
-                        sed -i "s#jibbbax/cicd-e2e:[0-9]*#jibbbax/cicd-e2e:${BUILD_NUMBER}#g" deploy.yaml
+                        echo "Updating Docker image..."
+
+                        sed -i "s#jibbbax/cicd-e2e:[0-9]*#jibbbax/cicd-e2e:${BUILD_NUMBER}#g" deploy/deploy.yaml
 
                         echo "After update:"
-                        cat deploy.yaml
+                        cat deploy/deploy.yaml
                     '''
                 }
             }
@@ -84,7 +80,7 @@ pipeline {
                         git config user.name "Jenkins"
                         git config user.email "jenkins@localhost"
 
-                        git add deploy.yaml
+                        git add deploy/deploy.yaml
 
                         git commit -m "Update Docker image tag to ${BUILD_NUMBER}" || true
 
