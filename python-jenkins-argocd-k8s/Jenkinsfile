@@ -9,7 +9,7 @@ environment {
 
 stages {
 
-    stage('Checkout') {
+    stage('Checkout Application') {
         steps {
             git(
                 credentialsId: 'github-credentials',
@@ -23,12 +23,13 @@ stages {
         steps {
             sh '''
                 echo "Building Docker Image"
-                docker build -t DineshReddy6303/cicd-e2e:${BUILD_NUMBER} .
+
+                docker build -t jibbax/cicd-e2e:${BUILD_NUMBER} .
             '''
         }
     }
 
-    stage('Push the artifacts') {
+    stage('Push Docker Image') {
         steps {
             withCredentials([
                 usernamePassword(
@@ -38,9 +39,15 @@ stages {
                 )
             ]) {
                 sh '''
-                    echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+                    echo "Logging in to Docker Hub"
 
-                    docker push DineshReddy6303/cicd-e2e:${BUILD_NUMBER}
+                    echo "$DOCKER_PASSWORD" | docker login \
+                        -u "$DOCKER_USERNAME" \
+                        --password-stdin
+
+                    echo "Pushing Docker Image"
+
+                    docker push jibbax/cicd-e2e:${BUILD_NUMBER}
 
                     docker logout
                 '''
@@ -48,7 +55,7 @@ stages {
         }
     }
 
-    stage('Checkout K8S manifest SCM') {
+    stage('Checkout K8S Manifest') {
         steps {
             git(
                 credentialsId: 'github-credentials',
@@ -58,34 +65,43 @@ stages {
         }
     }
 
-    stage('Update K8S manifest & push to Repo') {
+    stage('Update K8S Manifest') {
         steps {
             sh '''
                 echo "Current directory:"
                 pwd
 
-                echo "Files:"
+                echo "Files in workspace:"
                 ls -la
 
-                echo "Before update:"
+                echo "Current deploy.yaml:"
                 cat deploy.yaml
 
-                sed -i "s/32/${BUILD_NUMBER}/g" deploy.yaml
+                echo "Updating Docker image tag..."
 
-                echo "After update:"
+                sed -i "s#jibbax/cicd-e2e:[0-9]*#jibbax/cicd-e2e:${BUILD_NUMBER}#g" deploy.yaml
+
+                echo "Updated deploy.yaml:"
                 cat deploy.yaml
+            '''
+        }
+    }
 
+    stage('Commit and Push K8S Manifest') {
+        steps {
+            sh '''
                 git config user.name "Jenkins"
                 git config user.email "jenkins@localhost"
 
                 git add deploy.yaml
 
-                git commit -m "Updated deploy yaml | Jenkins Pipeline" || true
+                git commit -m "Update Docker image tag to ${BUILD_NUMBER}" || true
 
                 git push origin HEAD:main
             '''
         }
     }
 }
+```
 
 }
