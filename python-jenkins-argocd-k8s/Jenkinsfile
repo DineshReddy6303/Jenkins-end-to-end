@@ -73,19 +73,31 @@ pipeline {
             }
         }
 
-        stage('Commit and Push K8S Manifest') {
-            steps {
-                dir('application/python-jenkins-argocd-k8s') {
-                    sh '''
-                        git config user.name "Jenkins"
-                        git config user.email "jenkins@localhost"
 
-                        git add deploy/deploy.yaml
+stage('Commit and Push K8S Manifest') {
+    steps {
+        dir('application/python-jenkins-argocd-k8s') {
+            withCredentials([
+                usernamePassword(
+                    credentialsId: 'github-credentials',
+                    usernameVariable: 'GIT_USERNAME',
+                    passwordVariable: 'GIT_PASSWORD'
+                )
+            ]) {
+                sh '''
+                    git config user.name "Jenkins"
+                    git config user.email "jenkins@localhost"
 
-                        git commit -m "Update Docker image tag to ${BUILD_NUMBER}" || true
+                    git add deploy/deploy.yaml
 
-                        git push origin HEAD:main
-                    '''
+                    git commit -m "Update Docker image tag to ${BUILD_NUMBER}" || true
+
+                    git config credential.helper '!f() { echo "username=$GIT_USERNAME"; echo "password=$GIT_PASSWORD"; }; f'
+
+                    git push origin HEAD:main
+
+                    git config --unset credential.helper
+                '''
                 }
             }
         }
