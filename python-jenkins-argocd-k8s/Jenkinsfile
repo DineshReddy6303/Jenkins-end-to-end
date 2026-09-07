@@ -1,8 +1,7 @@
 pipeline {
-
-```
 agent any
 
+```
 environment {
     IMAGE_TAG = "${BUILD_NUMBER}"
 }
@@ -23,7 +22,6 @@ stages {
         steps {
             sh '''
                 echo "Building Docker Image"
-
                 docker build -t jibbax/cicd-e2e:${BUILD_NUMBER} .
             '''
         }
@@ -39,16 +37,8 @@ stages {
                 )
             ]) {
                 sh '''
-                    echo "Logging in to Docker Hub"
-
-                    echo "$DOCKER_PASSWORD" | docker login \
-                        -u "$DOCKER_USERNAME" \
-                        --password-stdin
-
-                    echo "Pushing Docker Image"
-
+                    echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
                     docker push jibbax/cicd-e2e:${BUILD_NUMBER}
-
                     docker logout
                 '''
             }
@@ -71,17 +61,15 @@ stages {
                 echo "Current directory:"
                 pwd
 
-                echo "Files in workspace:"
+                echo "Files:"
                 ls -la
 
-                echo "Current deploy.yaml:"
+                echo "Before update:"
                 cat deploy.yaml
-
-                echo "Updating Docker image tag..."
 
                 sed -i "s#jibbax/cicd-e2e:[0-9]*#jibbax/cicd-e2e:${BUILD_NUMBER}#g" deploy.yaml
 
-                echo "Updated deploy.yaml:"
+                echo "After update:"
                 cat deploy.yaml
             '''
         }
@@ -94,14 +82,12 @@ stages {
                 git config user.email "jenkins@localhost"
 
                 git add deploy.yaml
-
                 git commit -m "Update Docker image tag to ${BUILD_NUMBER}" || true
-
                 git push origin HEAD:main
             '''
         }
     }
 }
-```
+
 
 }
