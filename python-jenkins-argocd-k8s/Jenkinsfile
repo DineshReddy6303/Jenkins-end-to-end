@@ -22,7 +22,7 @@ stages {
     stage('Build Docker') {
         steps {
             sh '''
-                echo "Build Docker Image"
+                echo "Building Docker Image"
                 docker build -t DineshReddy6303/cicd-e2e:${BUILD_NUMBER} .
             '''
         }
@@ -32,7 +32,7 @@ stages {
         steps {
             withCredentials([
                 usernamePassword(
-                    credentialsId: 'dockerhub-credentials',
+                    credentialsId: 'docker-credentials',
                     usernameVariable: 'DOCKER_USERNAME',
                     passwordVariable: 'DOCKER_PASSWORD'
                 )
@@ -58,34 +58,31 @@ stages {
 
     stage('Update K8S manifest & push to Repo') {
         steps {
-            withCredentials([
-                usernamePassword(
-                    credentialsId: 'github-credentials',
-                    usernameVariable: 'GIT_USERNAME',
-                    passwordVariable: 'GIT_PASSWORD'
-                )
-            ]) {
-                sh '''
-                    echo "Before update:"
-                    cat deploy.yaml
+            sh '''
+                echo "Current directory:"
+                pwd
 
-                    sed -i "s/32/${BUILD_NUMBER}/g" deploy.yaml
+                echo "Files:"
+                ls -la
 
-                    echo "After update:"
-                    cat deploy.yaml
+                echo "Before update:"
+                cat deploy.yaml
 
-                    git config user.name "$GIT_USERNAME"
-                    git config user.email "$GIT_USERNAME@users.noreply.github.com"
+                sed -i "s/32/${BUILD_NUMBER}/g" deploy.yaml
 
-                    git add deploy.yaml
-                    git commit -m "Updated deploy.yaml | Jenkins Pipeline" || echo "No changes to commit"
+                echo "After update:"
+                cat deploy.yaml
 
-                    git push https://${GIT_USERNAME}:${GIT_PASSWORD}@github.com/DineshReddy6303/cicd-demo-manifests-repo.git HEAD:main
-                '''
-            }
+                git config user.name "Jenkins"
+                git config user.email "jenkins@localhost"
+
+                git add deploy.yaml
+                git commit -m "Updated deploy yaml | Jenkins Pipeline" || true
+
+                git push origin HEAD:main
+            '''
         }
     }
 }
-```
 
 }
