@@ -17,7 +17,7 @@ pipeline {
         sh 'mvn --test'
       }
     }
-      stage('Docker) {
+      stage('Docker') {
             agent {
               docker {
                 image 'docker:24'
