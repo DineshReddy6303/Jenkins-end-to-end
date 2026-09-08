@@ -90,7 +90,7 @@ stage('Commit and Push K8S Manifest') {
 
                     git add deploy/deploy.yaml
 
-                    git commit -m "Update Docker image tag to ${BUILD_NUMBER}" || true
+                    git diff --cached --quiet || git commit -m "Update Docker image tag to ${BUILD_NUMBER}"
 
                     git config credential.helper '!f() { echo "username=$GIT_USERNAME"; echo "password=$GIT_PASSWORD"; }; f'
 
