@@ -1,28 +1,7 @@
-
 pipeline {
     agent none
 
     stages {
-
-        stage('Checkout') {
-            agent {
-                docker {
-                    image 'alpine:latest'
-                }
-            }
-            steps {
-                checkout scm
-
-                sh '''
-                    echo "===== Workspace ====="
-                    pwd
-                    echo "===== Files ====="
-                    ls -la
-                    echo "===== POM files ====="
-                    find . -name pom.xml -print
-                '''
-            }
-        }
 
         stage('Build') {
             agent {
@@ -31,16 +10,7 @@ pipeline {
                 }
             }
             steps {
-                sh '''
-                    echo "===== Java Version ====="
-                    java -version
-
-                    echo "===== Maven Version ====="
-                    mvn -version
-
-                    echo "===== Building Application ====="
-                    mvn clean package
-                '''
+                sh 'mvn clean package'
             }
         }
 
@@ -51,10 +21,7 @@ pipeline {
                 }
             }
             steps {
-                sh '''
-                    echo "===== Running Tests ====="
-                    mvn test
-                '''
+                sh 'mvn test'
             }
         }
 
@@ -65,27 +32,8 @@ pipeline {
                 }
             }
             steps {
-                sh '''
-                    echo "===== Docker Version ====="
-                    docker --version
-                '''
+                sh 'docker --version'
             }
         }
     }
-
-    post {
-        success {
-            echo 'Pipeline completed successfully!'
-        }
-
-        failure {
-            echo 'Pipeline failed. Check the stage logs above.'
-        }
-
-        always {
-            echo 'Pipeline finished.'
-        }
-    }
 }
-
-
