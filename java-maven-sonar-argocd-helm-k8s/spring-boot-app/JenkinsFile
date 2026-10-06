@@ -60,21 +60,15 @@ pipeline {
             GIT_USER_NAME = "DineshReddy6303"
         }
         steps {
-            withCredentials([string(credentialsId: 'github', variable: 'github')]) {
+            withCredentials([string(credentialsId: 'github', variable: 'Git_Hub_Token')]) {
                 sh '''
-                      echo "===== WORKSPACE =====" 
-                       pwd 
-                      ls -la
-                      echo "===== CHECK GIT ====="
-                      git rev-parse --show-toplevel 
-                       git config user.email "dineshreddybuchupalli41@gmail.com"
-                       git config user.name "DineshReddy6303"
-                       echo "===== UPDATE IMAGE TAG =====" sed -i "s/replaceImageTag/${BUILD_NUMBER}/g" \
-                       java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml 
-                      git add java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml 
-                      git commit -m "Update deployment image to version ${BUILD_NUMBER}" || true 
-                      echo "===== PUSH TO GITHUB =====" 
-                      git push https://${GITHUB_TOKEN}@github.com/DineshReddy6303/Jenkins-end-to-end.git HEAD:main
+                    git config user.email "dineshreddybuchupalli41@gmail.com"
+                    git config user.name "DineshReddy6303"
+                    BUILD_NUMBER=${BUILD_NUMBER}
+                    sed -i "s/replaceImageTag/${BUILD_NUMBER}/g" java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
+                    git add java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
+                    git commit -m "Update deployment image to version ${BUILD_NUMBER}"
+                    git push https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME} HEAD:main
                                     
                 '''
             }
