@@ -60,7 +60,7 @@ pipeline {
             GIT_USER_NAME = "DineshReddy6303"
         }
         steps {
-            withCredentials([string(credentialsId: 'github', variable: 'Git_Hub_Token')]) {
+            withCredentials([string(credentialsId: 'Git_Hub_Token', variable: 'GITHUB_TOKEN')]) {
                 sh '''
                       echo "===== WORKSPACE =====" 
                        pwd 
