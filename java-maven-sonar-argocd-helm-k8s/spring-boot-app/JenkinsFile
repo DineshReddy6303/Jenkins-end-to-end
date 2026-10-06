@@ -25,7 +25,16 @@ pipeline {
       }
       steps {
         withCredentials([string(credentialsId: 'sonarqube', variable: 'SONAR_AUTH_TOKEN')]) {
-          sh 'cd java-maven-sonar-argocd-helm-k8s/spring-boot-app && mvn sonar:sonar -Dsonar.login=$SONAR_AUTH_TOKEN -Dsonar.host.url=${SONAR_URL}'
+             sh '''
+                echo "===== MAVEN/JAVA ENVIRONMENT ====="
+                echo "MAVEN_OPTS=$MAVEN_OPTS"
+                echo "MAVEN_ARGS=$MAVEN_ARGS"
+                echo "JAVA_TOOL_OPTIONS=$JAVA_TOOL_OPTIONS"
+                echo "_JAVA_OPTIONS=$_JAVA_OPTIONS"
+
+                echo "===== MAVEN VERSION ====="
+                mvn -version
+            '''
         }
       }
     }
