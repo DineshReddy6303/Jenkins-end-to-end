@@ -53,16 +53,15 @@ pipeline {
             }
         }
       }
-    }
-    stage('Update Deployment File') {
+   stage('Update Deployment File') {
         environment {
-            GIT_REPO_NAME = "java-maven-sonar-argocd-helm-k8s"
+            GIT_REPO_NAME = "Jenkins-end-to-end"
             GIT_USER_NAME = "DineshReddy6303"
         }
         steps {
             withCredentials([string(credentialsId: 'github', variable: 'GITHUB_TOKEN')]) {
                 sh '''
-                    cd java-maven-sonar-argocd-helm-k8s
+                  
                   git config user.email "dineshreddybuchupalli41@gmail.com"
                     git config user.name "DineshReddy6303"
                     BUILD_NUMBER=${BUILD_NUMBER}
@@ -70,7 +69,8 @@ pipeline {
                     git add java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
                     git commit -m "Update deployment image to version ${BUILD_NUMBER}"
                     git push https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME} HEAD:main
-                
+                 }
+    s
                   
                 '''
             }
