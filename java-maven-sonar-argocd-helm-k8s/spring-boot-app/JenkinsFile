@@ -3,16 +3,35 @@ pipeline {
         docker {
             image 'dineshreddy6303/maven-docker-agent:v1'
             args '--user root -v /var/run/docker.sock:/var/run/docker.sock'
+            reuseNode true
         }
+    }
+
+    options {
+        timestamps()
+        skipDefaultCheckout(true)
+        disableConcurrentBuilds()
+        timeout(time: 30, unit: 'MINUTES')
+        buildDiscarder(logRotator(
+            numToKeepStr: '10',
+            artifactNumToKeepStr: '5'
+        ))
     }
 
     environment {
         SONAR_URL = 'http://3.111.170.241:9000'
+
         DOCKER_IMAGE = "jibbbox/ultimate-cicd:${BUILD_NUMBER}"
-        GIT_REPO_NAME = 'Jenkins-end-to-end'
+        DOCKER_REPOSITORY = 'jibbbox/ultimate-cicd'
+
         GIT_USER_NAME = 'DineshReddy6303'
+        GIT_USER_EMAIL = 'dineshreddybuchupalli41@gmail.com'
+
         APP_DIR = 'java-maven-sonar-argocd-helm-k8s/spring-boot-app'
         DEPLOYMENT_FILE = 'java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml'
+
+        // Update this if your GitOps project uses a different branch.
+        GIT_BRANCH = 'main'
     }
 
     stages {
@@ -20,15 +39,37 @@ pipeline {
         stage('Checkout') {
             steps {
                 echo 'Checking out source code'
+
                 checkout scm
-                sh 'ls -ltr'
+
+                sh '''
+                    set -eu
+                    echo "Workspace: $WORKSPACE"
+                    echo "Build number: $BUILD_NUMBER"
+
+                    test -d "$APP_DIR"
+                    test -f "$DEPLOYMENT_FILE"
+
+                    echo "Application and deployment manifest found."
+                '''
             }
         }
 
         stage('Build and Test') {
             steps {
                 dir("${APP_DIR}") {
-                    sh 'mvn clean package'
+                    sh '''
+                        set -eu
+                        mvn -B clean verify
+                    '''
+                }
+            }
+            post {
+                always {
+                    junit(
+                        testResults: "${APP_DIR}/target/surefire-reports/*.xml",
+                        allowEmptyResults: true
+                    )
                 }
             }
         }
@@ -43,10 +84,29 @@ pipeline {
                 ]) {
                     dir("${APP_DIR}") {
                         sh '''
-                            mvn org.sonarsource.scanner.maven:sonar-maven-plugin:5.5.0.6356:sonar \
+                            set -eu
+
+                            mvn -B \
+                              org.sonarsource.scanner.maven:sonar-maven-plugin:5.5.0.6356:sonar \
                               -Dsonar.host.url="$SONAR_URL" \
                               -Dsonar.token="$SONAR_AUTH_TOKEN"
                         '''
+                    }
+                }
+            }
+        }
+
+        stage('SonarQube Quality Gate') {
+            steps {
+                timeout(time: 5, unit: 'MINUTES') {
+                    script {
+                        def qg = waitForQualityGate()
+
+                        if (qg.status != 'OK') {
+                            error "SonarQube Quality Gate failed: ${qg.status}"
+                        }
+
+                        echo 'SonarQube Quality Gate passed.'
                     }
                 }
             }
@@ -62,20 +122,33 @@ pipeline {
                             passwordVariable: 'DOCKER_PASSWORD'
                         )
                     ]) {
-                        sh '''
-                            echo "$DOCKER_PASSWORD" | docker login \
-                              -u "$DOCKER_USERNAME" \
-                              --password-stdin
-                        '''
-
-                        dir("${APP_DIR}") {
+                        try {
                             sh '''
-                                docker build -t "$DOCKER_IMAGE" .
-                                docker push "$DOCKER_IMAGE"
-                            '''
-                        }
+                                set -eu
 
-                        sh 'docker logout'
+                                echo "$DOCKER_PASSWORD" | docker login \
+                                  --username "$DOCKER_USERNAME" \
+                                  --password-stdin
+                            '''
+
+                            dir("${APP_DIR}") {
+                                sh '''
+                                    set -eu
+
+                                    docker build \
+                                      --pull \
+                                      --tag "$DOCKER_IMAGE" \
+                                      .
+
+                                    docker push "$DOCKER_IMAGE"
+                                '''
+                            }
+                        } finally {
+                            sh(
+                                script: 'docker logout || true',
+                                returnStatus: true
+                            )
+                        }
                     }
                 }
             }
@@ -92,20 +165,43 @@ pipeline {
                     sh '''
                         set -eu
 
-                        git config user.email "dineshreddybuchupalli41@gmail.com"
-                        git config user.name "DineshReddy6303"
+                        git config user.email "$GIT_USER_EMAIL"
+                        git config user.name "$GIT_USER_NAME"
 
-                        sed -i "s/replaceImageTag/${BUILD_NUMBER}/g" "$DEPLOYMENT_FILE"
+                        # Confirm the manifest contains the expected image.
+                        grep -Fq "$DOCKER_REPOSITORY" "$DEPLOYMENT_FILE"
 
+                        # Replace only the image tag placeholder.
+                        sed -i \
+                          "s|replaceImageTag|${BUILD_NUMBER}|g" \
+                          "$DEPLOYMENT_FILE"
+
+                        # Fail if the placeholder was not present.
+                        if grep -q 'replaceImageTag' "$DEPLOYMENT_FILE"; then
+                            echo "ERROR: Image tag placeholder was not fully replaced."
+                            exit 1
+                        fi
+
+                        # Stage only the deployment manifest.
                         git add "$DEPLOYMENT_FILE"
 
                         if ! git diff --cached --quiet; then
                             git commit -m "Update deployment image to version ${BUILD_NUMBER}"
 
-                            git -c http.extraheader="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GITHUB_TOKEN" | base64 | tr -d '\\n')" \
-                                push origin HEAD:main
+                            # Push using the GitHub token without embedding it
+                            # in the remote URL or printing it in the console.
+                            AUTH_HEADER="$(printf 'x-access-token:%s' "$GITHUB_TOKEN" | base64 | tr -d '\\n')"
+                            export AUTH_HEADER
+
+                            git \
+                              -c http.extraheader="AUTHORIZATION: basic ${AUTH_HEADER}" \
+                              push origin "HEAD:${GIT_BRANCH}"
+
+                            unset AUTH_HEADER
+
+                            echo "Deployment manifest pushed successfully."
                         else
-                            echo "No deployment changes to commit"
+                            echo "No deployment manifest changes to commit."
                         fi
                     '''
                 }
@@ -115,15 +211,22 @@ pipeline {
 
     post {
         always {
-            echo 'Pipeline execution completed'
+            echo 'Pipeline execution completed.'
         }
 
         success {
-            echo 'CI/CD pipeline completed successfully'
+            echo "CI/CD pipeline completed successfully. Build: ${BUILD_NUMBER}"
+            echo "Docker image: ${DOCKER_IMAGE}"
+            echo 'If Argo CD monitors the updated Git path, it can synchronize the change.'
         }
 
         failure {
-            echo 'Pipeline failed. Check the console output for details.'
+            echo 'Pipeline failed. Review the Jenkins console output.'
+        }
+
+        cleanup {
+            echo 'Pipeline cleanup completed.'
         }
     }
 }
+
