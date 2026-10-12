@@ -73,28 +73,36 @@ pipeline {
                 }
             }
         }
+```groovy
+stage('Static Code Analysis') {
+    steps {
+        withCredentials([
+            string(
+                credentialsId: 'sonarqube',
+                variable: 'SONAR_AUTH_TOKEN'
+            )
+        ]) {
+            dir("${APP_DIR}") {
+                sh '''
+                    set -eu
 
-        stage('Static Code Analysis') {
-            steps {
-                withCredentials([
-                    string(
-                        credentialsId: 'sonarqube',
-                        variable: 'SONAR_AUTH_TOKEN'
-                    )
-                ]) {
-                    dir("${APP_DIR}") {
-                        sh '''
-                            set -eu
+                    if [ -z "$SONAR_AUTH_TOKEN" ]; then
+                        echo "ERROR: SonarQube token is empty."
+                        exit 1
+                    fi
 
-                            mvn -B \
-                              org.sonarsource.scanner.maven:sonar-maven-plugin:5.5.0.6356:sonar \
-                              -Dsonar.host.url="$SONAR_URL" \
-                              -Dsonar.token="$SONAR_AUTH_TOKEN"
-                        '''
-                    }
-                }
+                    mvn -B \
+                      org.sonarsource.scanner.maven:sonar-maven-plugin:5.5.0.6356:sonar \
+                      -Dsonar.host.url="$SONAR_URL" \
+                      -Dsonar.token="$SONAR_AUTH_TOKEN"
+                '''
             }
         }
+    }
+}
+
+
+
 
         stage('SonarQube Quality Gate') {
             steps {
