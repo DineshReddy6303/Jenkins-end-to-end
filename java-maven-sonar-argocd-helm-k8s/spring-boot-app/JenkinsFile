@@ -85,15 +85,24 @@ stage('Static Code Analysis') {
                 sh '''
                     set -eu
 
-                    if [ -z "$SONAR_TOKEN" ]; then
-                        echo "ERROR: SonarQube token is empty."
+                    test -n "$SONAR_TOKEN" || {
+                        echo "ERROR: SONAR_TOKEN is empty"
                         exit 1
-                    fi
+                    }
+
+                    test -n "$SONAR_URL" || {
+                        echo "ERROR: SONAR_URL is empty"
+                        exit 1
+                    }
+
+                    echo "SonarQube URL: $SONAR_URL"
+                    echo "SonarQube token is present"
 
                     mvn -B \
                       org.sonarsource.scanner.maven:sonar-maven-plugin:5.5.0.6356:sonar \
-                      -Dsonar.host.url="$SONAR_URL" \
-                      -Dsonar.token="$SONAR_TOKEN"
+                      "-Dsonar.host.url=$SONAR_URL" \
+                      "-Dsonar.token=$SONAR_TOKEN"
+
                 '''
             }
         }
