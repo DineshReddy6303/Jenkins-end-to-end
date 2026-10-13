@@ -78,14 +78,14 @@ stage('Static Code Analysis') {
         withCredentials([
             string(
                 credentialsId: 'sonarqube',
-                variable: 'SONAR_AUTH_TOKEN'
+                variable: 'SONAR_TOKEN'
             )
         ]) {
             dir("${APP_DIR}") {
                 sh '''
                     set -eu
 
-                    if [ -z "$SONAR_AUTH_TOKEN" ]; then
+                    if [ -z "$SONAR_TOKEN" ]; then
                         echo "ERROR: SonarQube token is empty."
                         exit 1
                     fi
