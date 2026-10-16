@@ -1,3 +1,4 @@
+
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -16,7 +17,8 @@ spec:
         app: spring-boot-app
     spec:
       containers:
-      - name: spring-boot-app
-        image: DineshReddy6303/jibbbox/ultimate-cicd:84
-        ports:
-        - containerPort: 8080
+        - name: spring-boot-app
+          image: jibbbox/ultimate-cicd:84
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
