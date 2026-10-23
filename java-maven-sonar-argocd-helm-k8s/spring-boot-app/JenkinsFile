@@ -64,28 +64,46 @@ stage('Update Deployment File') {
         GIT_REPO_NAME = "Jenkins-end-to-end"
         GIT_USER_NAME = "DineshReddy6303"
     }
+
+         stage('Update Deployment File') {
+    environment {
+        GIT_USER_NAME = 'DineshReddy6303'
+        GIT_USER_EMAIL = 'dineshreddybuchupalli41@gmail.com'
+        GIT_REPO_NAME = 'Jenkins-end-to-end'
+    }
     steps {
-        withCredentials([string(credentialsId: 'github', variable: 'GITHUB_TOKEN')]) {
-            dir("${WORKSPACE}") {
-                sh '''
-                    set -e
+        withCredentials([string(
+            credentialsId: 'github',
+            variable: 'GITHUB_TOKEN'
+        )]) {
+            sh '''
+                set -eu
 
-                    git config user.email "dineshreddybuchupalli41@gmail.com"
-                    git config user.name "DineshReddy6303"
+                rm -rf deploy-repo
 
-                    FILE="java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml"
+                git clone https://github.com/${GIT_USER_NAME}/${GIT_REPO_NAME}.git deploy-repo
 
-                    sed -i "s/replaceImageTag/${BUILD_NUMBER}/g" "$FILE"
+                cd deploy-repo
 
-                    git add "$FILE"
+                git config user.name "$GIT_USER_NAME"
+                git config user.email "$GIT_USER_EMAIL"
 
-                    if ! git diff --cached --quiet; then
-                        git commit -m "Update deployment image to version ${BUILD_NUMBER}"
+                FILE="java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml"
 
-                        git push "https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME}.git" HEAD:main
-                    else
-                        echo "No changes to commit."
-                    fi
+                sed -i "s|replaceImageTag|${BUILD_NUMBER}|g" "$FILE"
+
+                git add "$FILE"
+
+                if ! git diff --cached --quiet; then
+                    git commit -m "Update deployment image to version ${BUILD_NUMBER}"
+
+                    AUTH_HEADER=$(printf 'x-access-token:%s' "$GITHUB_TOKEN" | base64 | tr -d '\\n')
+
+                    git -c http.extraheader="AUTHORIZATION: basic $AUTH_HEADER" \
+                        push origin HEAD:main
+                else
+                    echo "No deployment changes to commit."
+                fi
                 '''
             }
         }
