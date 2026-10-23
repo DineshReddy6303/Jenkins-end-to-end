@@ -23,7 +23,7 @@ pipeline {
 
         stage('Static Code Analysis') {
             environment {
-                SONAR_URL = 'http://3.111.170.241:9000'
+                SONAR_URL = 'http://15.207.87.92:9000'
             }
             steps {
                 withCredentials([string(
