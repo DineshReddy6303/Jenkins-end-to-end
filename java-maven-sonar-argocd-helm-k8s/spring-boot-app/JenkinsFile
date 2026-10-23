@@ -59,12 +59,6 @@ pipeline {
         }
 
         
-stage('Update Deployment File') {
-    environment {
-        GIT_REPO_NAME = "Jenkins-end-to-end"
-        GIT_USER_NAME = "DineshReddy6303"
-    }
-
          stage('Update Deployment File') {
     environment {
         GIT_USER_NAME = 'DineshReddy6303'
