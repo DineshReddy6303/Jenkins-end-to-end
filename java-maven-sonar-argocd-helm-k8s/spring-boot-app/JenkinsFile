@@ -58,54 +58,26 @@ pipeline {
             }
         }
 
-        stage('Update Deployment File') {
-            environment {
-                GIT_USER_NAME = 'DineshReddy6303'
-                GIT_USER_EMAIL = 'dineshreddybuchupalli41@gmail.com'
-            }
-            steps {
-                withCredentials([string(
-                    credentialsId: 'github',
-                    variable: 'GITHUB_TOKEN'
-                )]) {
-                    sh '''
-                        set -eu
+        
+stage('Update Deployment File') {
+    environment {
+        GIT_REPO_NAME = "Jenkins-end-to-end"
+        GIT_USER_NAME = "DineshReddy6303"
+    }
+    steps {
+        withCredentials([string(credentialsId: 'github', variable: 'GITHUB_TOKEN')]) {
+            sh '''
+                git config user.email "dineshreddybuchupalli41@gmail.com"
+                git config user.name "DineshReddy6303"
 
-                        git config user.name "$GIT_USER_NAME"
-                        git config user.email "$GIT_USER_EMAIL"
+                sed -i "s/replaceImageTag/${BUILD_NUMBER}/g" java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
 
-                        FILE="java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml"
+                git add java-maven-sonar-argocd-helm-k8s/spring-boot-app-manifests/deployment.yml
 
-                        sed -i "s|replaceImageTag|${BUILD_NUMBER}|g" "$FILE"
+                git commit -m "Update deployment image to version ${BUILD_NUMBER}"
 
-                        git add "$FILE"
-
-                        if ! git diff --cached --quiet; then
-                            git commit -m "Update deployment image to version ${BUILD_NUMBER}"
-
-                            AUTH_HEADER=$(printf 'x-access-token:%s' "$GITHUB_TOKEN" | base64 | tr -d '\\n')
-
-                            git -c http.extraheader="AUTHORIZATION: basic $AUTH_HEADER" \
-                                push origin HEAD:main
-                        else
-                            echo "No deployment changes to commit."
-                        fi
-                    '''
-                }
-            }
+                git push https://${GITHUB_TOKEN}@github.com/${GIT_USER_NAME}/${GIT_REPO_NAME}.git HEAD:main
+            '''
         }
     }
-
-    post {
-        always {
-            echo 'Pipeline execution completed.'
-        }
-        success {
-            echo "Pipeline completed successfully. Build: ${BUILD_NUMBER}"
-        }
-        failure {
-            echo 'Pipeline failed. Review Jenkins console output.'
-        }
-    }
-
 }
